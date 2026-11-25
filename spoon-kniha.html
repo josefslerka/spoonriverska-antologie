@@ -53,7 +53,7 @@ main:focus{outline:none}
 .verse{display:block;padding-left:1.12em;text-indent:-1.12em;overflow-wrap:break-word}
 .verse-link{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.17em}
 .verse-link:hover{text-decoration-thickness:2px}
-.reading-foot{border-top:1px solid var(--line);padding-top:15px;margin-top:30px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.reading-foot{border-top:1px solid var(--line);padding-top:15px;margin:30px 0 2rem}
 .reading-trail{border-left:1px solid var(--line);padding-left:20px;margin-top:10px}
 .trail-list{list-style:none;margin:14px 0 0;padding:0}
 .trail-list li{color:var(--muted);font-size:.86rem;position:relative;padding:0 0 13px 15px;line-height:1.4}
@@ -116,13 +116,16 @@ body{background:radial-gradient(ellipse at 45% 36%,#faf7f0 0%,var(--paper) 73%)}
 .chapter-neighbors{padding:0 0 0 2.15em;margin:14px 0 0;color:var(--muted);font:.93rem/1.35 var(--sans)}
 .chapter-neighbors li{padding:0 0 9px 2px}.chapter-neighbors li::marker,.index-number{font-variant-numeric:tabular-nums;color:var(--muted)}
 .chapter-neighbors li[aria-current]{font-weight:650;color:var(--ink)}.chapter-neighbors a{text-underline-offset:.19em}
-.trail-heading{margin-top:27px}.leaves-nav{align-items:stretch;margin-bottom:2rem}.leaf-link{display:grid;align-content:center;gap:4px;max-width:49%;min-height:50px;color:var(--accent);text-decoration:none}
+.trail-heading{margin-top:27px}.leaves-nav{display:flex;align-items:stretch;justify-content:space-between;gap:18px}
+.leaves-top{max-width:1040px;margin:0 auto;padding:7px 0;border-bottom:1px solid var(--line)}
+.leaves-top+.spread{padding-top:clamp(22px,2.8vw,40px)}
+.leaf-link{display:grid;align-content:center;gap:4px;min-width:0;max-width:49%;min-height:50px;color:var(--accent);text-decoration:none;overflow-wrap:anywhere}
 .leaf-link[rel=next]{margin-left:auto;text-align:right}.leaf-direction{font:.8rem/1.2 var(--sans);color:var(--muted)}.leaf-name{font:1.42rem/1.17 var(--display)}.leaf-link:hover .leaf-name{text-decoration:underline;text-underline-offset:.16em}
 .index-link{display:flex;align-items:baseline;gap:12px}.index-number{min-width:3ch;text-align:right;font:500 .82rem var(--mono)}.index-link[aria-current]{color:var(--accent);background:#e7eddf}
 .icon-btn{font:400 1.5rem var(--sans)}.poetry .stanza{white-space:pre-wrap;tab-size:3;overflow-wrap:break-word}
 @supports (text-indent:1em hanging each-line){.poetry .stanza{text-indent:1em hanging each-line}}
 .hub-link{color:var(--accent)}.hub-link svg{width:16px;height:16px}.hub-link:hover,.nav-button:hover{text-decoration:underline;text-underline-offset:.2em}
-@media(max-width:730px){.spread{padding-top:25px}.reading-trail{display:none}.nearby{display:none}.leaves-nav{margin-bottom:0}}
+@media(max-width:730px){.spread{padding-top:25px}.reading-trail{display:none}.nearby{display:none}.reading-foot{margin-bottom:0}.leaves-top{padding-block:4px}}
 @media(max-width:440px){.bar{gap:6px}.top nav{gap:6px}.frame{padding-inline:16px}.brand{font-size:1.5rem}.hub-link span{display:none}.brand,.nav-button{gap:5px}.about-button{font-size:.8rem}}
 @media print{.top,.reader-nav,.reading-trail,.leaves-nav,.position,dialog,.skip{display:none}.frame,.spread,.reader{display:block;padding:0;margin:0}.verse-link{text-decoration:none;color:inherit}.poetry{font-size:12pt}}
 </style>
@@ -265,6 +268,14 @@ function leaf(poem,direction) {
   a.append(el('span','leaf-direction',direction),el('span','leaf-name',poem.title));
   return a;
 }
+function bookPaging(index,atTop) {
+  const nav=el('nav',atTop?'leaves-nav leaves-top':'leaves-nav reading-foot');
+  nav.setAttribute('aria-label',atTop?'Listování před básní':'Listování za básní');
+  if (index>0) nav.append(leaf(book[index-1],'Předchozí'));
+  if (index<book.length-1) nav.append(leaf(book[index+1],'Další'));
+  else nav.append(link(null,'text-link','Titulní list'));
+  return nav;
+}
 function drawPoem(id) {
   const index=positions.get(id),poem=book[index],s=state();
   const bar=el('div','reader-nav');
@@ -279,13 +290,7 @@ function drawPoem(id) {
   const h=el('h1','poem-title',poem.title);h.tabIndex=-1;
   a.append(h);
   if (poem.subtitle) a.append(el('p','poem-subtitle',poem.subtitle));
-  a.append(textOf(poem));
-  const foot=el('nav','reading-foot leaves-nav');
-  foot.setAttribute('aria-label','Listování knihou');
-  if (index>0) foot.append(leaf(book[index-1],'Předchozí'));
-  if (index<book.length-1) foot.append(leaf(book[index+1],'Další'));
-  else foot.append(link(null,'text-link','Titulní list'));
-  a.append(foot);spread.append(a);
+  a.append(textOf(poem),bookPaging(index,false));spread.append(a);
   const side=el('aside','reading-trail');
   const nearby=el('nav','nearby');nearby.setAttribute('aria-label','Okolní texty podle obsahu');
   nearby.append(el('h2','small-label','V knize'));
@@ -303,7 +308,7 @@ function drawPoem(id) {
     s.trail.slice(-4).forEach((n,i,ns)=>{if(!positions.has(n))return;const li=el('li',i===ns.length-1?'here':'');li.append(i===ns.length-1?book[positions.get(n)].title:link(n,'',book[positions.get(n)].title));route.append(li);});
     side.append(route);
   }
-  spread.append(side);main.append(bar,spread);
+  spread.append(side);main.append(bar,bookPaging(index,true),spread);
 }
 function updateContents() {
   const q=fold(query.value.trim()), fragment=document.createDocumentFragment();
